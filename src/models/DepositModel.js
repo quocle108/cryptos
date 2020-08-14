@@ -8,7 +8,7 @@ var DepositSchema = new Schema({
 	to: {type: String, required: true, index: true},
 	value: {type: Number, required: true},
 	block_confirmation:{type: Number},
-	status: {type: String},
+	status: {type: String, enum : ['unconfrim','done'], default: 'unconfrim', index: true},
 	
 }, {timestamps: true});
 

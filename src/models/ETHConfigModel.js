@@ -4,10 +4,10 @@ var Schema = mongoose.Schema;
 
 var ETHConfigSchema = new Schema({
 	_id :{type: Number},
-	deposit_wallet_name: {type: String, required: true},
-	withdraw_wallet_name: {type: String, required: true},
-	withdraw_address: {type: String, required: true},
-	cold_address: {type: String, required: true},
+	depositWalletName: {type: String, required: true},
+	withdrawWalletName: {type: String, required: true},
+	withdrawAddress: {type: String, required: true},
+	coldAddress: {type: String, required: true},
 }, {timestamps: true});
 
 module.exports = mongoose.model("ETHConfig", ETHConfigSchema);

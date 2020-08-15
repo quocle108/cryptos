@@ -141,7 +141,7 @@ class EthHdWallet {
    * @param  {String} data Data
    * @param  {Number} gasLimit Total Gas to use
    * @param  {Number} gasPrice Gas price (wei per gas unit)
-   * @param  {String} chainId Chain id
+   * @param  {String} chainId Chain id see https://github.com/ethereum/EIPs/blob/master/EIPS/eip-155.md 
    *
    * @return {String} Raw transaction string.
    */
@@ -154,7 +154,6 @@ class EthHdWallet {
 		if (!wallet) {
 			throw new Error("Invalid from address");
 		}
-
 		const tx = new EthereumTx({
 			nonce, to, value, data, gasLimit, gasPrice, chainId
 		});

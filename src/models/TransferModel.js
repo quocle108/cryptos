@@ -9,4 +9,4 @@ var TransferSchema = new Schema({
 	status: {type: String, required: true},
 }, {timestamps: true});
 
-module.exports = mongoose.model("Book", TransferSchema);
+module.exports = mongoose.model("Transfer", TransferSchema);

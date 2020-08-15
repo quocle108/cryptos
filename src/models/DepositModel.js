@@ -3,12 +3,12 @@ var mongoose = require("mongoose");
 var Schema = mongoose.Schema;
 
 var DepositSchema = new Schema({
-	transaction_id: {type: String, required: true, unique : true},
+	transactionId: {type: String, required: true, unique : true},
 	currency: { type: String, required: true, index: true},
 	to: {type: String, required: true, index: true},
 	value: {type: Number, required: true},
-	block_confirmation:{type: Number},
-	status: {type: String, enum : ['unconfrim','done'], default: 'unconfrim', index: true},
+	blockConfirmation:{type: Number},
+	status: {type: String, enum : ["unconfirm", "forwarded", "done"], default: "unconfirm", index: true},
 	
 }, {timestamps: true});
 

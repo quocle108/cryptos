@@ -12,6 +12,6 @@ module.exports = {
 	memo: {
 		in: ["body"],
 		errorMessage: "\"memo\" field is missing",
-		exists: true
+		optional: true
 	}
 };

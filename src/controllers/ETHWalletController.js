@@ -1,141 +1,130 @@
 const apiResponse = require("../common/helpers/apiResponse");
-const { generateMasterKey, EthHdWallet } = require("../common/blockchain/ETH");
-const { Wallet, ETHConfig, ETHSyncBlock } = require("../models");
+const { generateMasterKey, EthHdWallet } = require("../blockchain/ETH");
+const { Wallet, ETHConfig, ETHSyncBlock, Withdraw } = require("../models");
 const { isEmpty } = require("lodash");
-const {
-	decrypt,
-	encrypt
-} = require("../common/helpers/utility");
+const { constants } = require("../common/helpers/constants");
+const { ETHSyncBlockInfo, web3 } = require("./ETHSyncBlockController");
+const { decrypt, encrypt } = require("../common/helpers/utility");
 
-const { initialize } = require("./ETHSyncBlockController");
+var depositWallet = undefined;
+var withdrawWallet = undefined;
+var configETH = undefined;
 
-const ETH_CONFIG_DB_ID = 0;
-const ETH_SYNC_BLOCK_DB_ID = 1;
-const DEFAULT_WALLET_PASSWORD = "passworddsd";
+async function initWallet(){
 
-global.depositWallet = undefined;
-global.withdrawWallet = undefined;
-global.configETH = undefined;
-global.listenAddresses= []
-
-initWallet = async () => {
 	if (isEmpty(configETH)) {
-		configETH = await ETHConfig.findById(ETH_CONFIG_DB_ID);
+		configETH = await ETHConfig.findById(constants.eth.CONFIG_ID);
 	}
 
 	if (!isEmpty(configETH)) {
-		const existedDepositWallet = await Wallet.findOne({ wallet_name: configETH.deposit_wallet_name });
+		const existedDepositWallet = await Wallet.findOne({ walletName: configETH.depositWalletName });
 		if (!isEmpty(existedDepositWallet)) {
-			const masterKey = decrypt(existedDepositWallet.encripted_key, DEFAULT_WALLET_PASSWORD);
+			const masterKey = decrypt(existedDepositWallet.encriptedKey, constants.eth.DEFAULT_WALLET_PASSWORD);
 			depositWallet = new EthHdWallet(masterKey);
-			depositWallet.generateAddresses(existedDepositWallet.addresses_num);
+			depositWallet.generateAddresses(existedDepositWallet.addressesNum);
 
 		}
 
-		const existedWithdrawWallet = await Wallet.findOne({ wallet_name: configETH.withdraw_wallet_name });
+		const existedWithdrawWallet = await Wallet.findOne({ walletName: configETH.withdrawWalletName });
 		if (!isEmpty(existedDepositWallet)) {
-			const masterKey = decrypt(existedWithdrawWallet.encripted_key, DEFAULT_WALLET_PASSWORD);
+			const masterKey = decrypt(existedWithdrawWallet.encriptedKey, constants.eth.DEFAULT_WALLET_PASSWORD);
 			withdrawWallet = new EthHdWallet(masterKey);
-			withdrawWallet.generateAddresses(existedWithdrawWallet.addresses_num);
+			withdrawWallet.generateAddresses(existedWithdrawWallet.addressesNum);
 		}
 	}
 	else {
-	    console.log("Please setup the Deposit/Withdraw Wallet")
+		console.log("Please setup the Deposit/Withdraw Wallet");
 	}
-};
+}
 
-(function () {
-	initWallet();
-})();
-
-configWallet = async (req, res) => {
+async function configWallet(req, res){
 	const {
-		deposit_wallet_name,
-		cold_address,
-		withdraw_wallet_name
+		depositWalletName,
+		coldAddress,
+		withdrawWalletName
 	} = req.body;
 
 	try {
 
-		const existedDepositWallet = await Wallet.findOne({ wallet_name: deposit_wallet_name });
-		const existedWithdrawWallet = await Wallet.findOne({ wallet_name: withdraw_wallet_name });
-		if (isEmpty(existedDepositWallet) || isEmpty(existedWithdrawWallet) || existedDepositWallet.wallet_type !== 'deposit' || existedWithdrawWallet.wallet_type !== 'withdraw' || isEmpty(existedWithdrawWallet.withdraw_address)) {
+		const existedDepositWallet = await Wallet.findOne({ walletName: depositWalletName });
+		const existedWithdrawWallet = await Wallet.findOne({ walletName: withdrawWalletName });
+		if (isEmpty(existedDepositWallet) || isEmpty(existedWithdrawWallet) || existedDepositWallet.walletType !== "deposit" || existedWithdrawWallet.walletType !== "withdraw" || isEmpty(existedWithdrawWallet.withdrawAddress)) {
 			return apiResponse.ErrorResponse(res, "Invalid wallet");
 		}
 
 		const config = new ETHConfig({
-			_id: ETH_CONFIG_DB_ID,
-			deposit_wallet_name: deposit_wallet_name,
-			withdraw_wallet_name: withdraw_wallet_name,
-			withdraw_address: existedWithdrawWallet.withdraw_address,
-			cold_address: cold_address,
+			_id: constants.eth.CONFIG_ID,
+			depositWalletName: depositWalletName,
+			withdrawWalletName: withdrawWalletName,
+			withdrawAddress: existedWithdrawWallet.withdrawAddress,
+			coldAddress: coldAddress,
 		});
 
-		configETH = await ETHConfig.findOneAndUpdate({ _id: ETH_CONFIG_DB_ID }, config, { upsert: true });
+		configETH = await ETHConfig.findOneAndUpdate({ _id: constants.eth.CONFIG_ID }, config, { upsert: true });
 		await initWallet();
 
-		response_data = {
+		const responseData = {
 			configETH
 		};
 
-		return apiResponse.successResponseWithData(res, "Config Created. Please backup master key safe", response_data);
+		return apiResponse.successResponseWithData(res, "Config Created", responseData);
 	} catch (e) {
 		console.log("reponse", e);
 		return apiResponse.ErrorResponse(res, e.message);
 	}
-};
+}
 
-createWallet = async (req, res) => {
+async function createWallet(req, res){
 	const {
-		wallet_name,
-		wallet_type
+		walletName,
+		walletType
 	} = req.body;
 
 	try {
 		const masterKey = generateMasterKey();
-		var withdrawAddress
-		if (wallet_type == 'withdraw') {
+		var withdrawAddress;
+		if (walletType == "withdraw") {
 			const wallet = new EthHdWallet(masterKey);
 			withdrawAddress = wallet.generateAddresses(1);
 		}
 
-		const encriptedKey = encrypt(masterKey, DEFAULT_WALLET_PASSWORD);
+		const encriptedKey = encrypt(masterKey, constants.eth.DEFAULT_WALLET_PASSWORD);
 
-		const existedWallet = await Wallet.findOne({ wallet_name: wallet_name });
+		const existedWallet = await Wallet.findOne({ walletName: walletName });
 
 		if (!isEmpty(existedWallet)) {
 			return apiResponse.ErrorResponse(res, "The wallet name already exist");
 		}
 
 		const wallet = new Wallet({
-			wallet_name: wallet_name,
-			crypto_cyrrency: "ETH",
-			wallet_type: wallet_type,
-			encripted_key: encriptedKey,
-			withdraw_address: withdrawAddress[0],
-			addresses_num: isEmpty(withdrawAddress) ? 0 : 1
+			walletName: walletName,
+			currency: "ETH",
+			walletType: walletType,
+			encriptedKey: encriptedKey,
+			withdrawAddress: isEmpty(withdrawAddress) ? "" : withdrawAddress[0],
+			addressesNum: isEmpty(withdrawAddress) ? 0 : 1
 		});
 
-		const dp_reponse = await Wallet.create(wallet);
+		const response = await Wallet.create(wallet);
 
-		response_data = {
-			wallet_name: dp_reponse.wallet_name,
-			wallet_type: dp_reponse.wallet_type,
-			master_key: masterKey,
+		const responseData = {
+			walletName: response.walletName,
+			walletType: response.walletType,
+			masterKey: masterKey,
 		};
 
-		if(!isEmpty(withdrawAddress)){
-			response_data.withdraw_address = withdrawAddress[0]
+		if (!isEmpty(withdrawAddress)) {
+			responseData.withdrawAddress = withdrawAddress[0];
 		}
 
-		return apiResponse.successResponseWithData(res, "Wallet Created. Please backup master key safe", response_data);
+		return apiResponse.successResponseWithData(res, "Wallet Created. Please backup master key safe", responseData);
 	} catch (e) {
 		console.log("reponse", e);
 		return apiResponse.ErrorResponse(res, e.message);
 	}
-};
+}
 
-genarateAddress = async (req, res) => {
+async function genarateAddress(req, res){
 
 	try {
 		if (isEmpty(depositWallet)) {
@@ -143,47 +132,93 @@ genarateAddress = async (req, res) => {
 		}
 
 		const address = depositWallet.generateAddresses(1);
-		// if (listenAddresses.indexOf(address) != -1) {
-		// 	return apiResponse.ErrorResponse(res, "Somthing Wrong. Address already exist");
-		// }
-		// listenAddresses.push(address);
-		await Wallet.findOneAndUpdate({ wallet_name: configETH.deposit_wallet_name }, { addresses_num: depositWallet.getAddressCount() });
-		await ETHSyncBlock.findOneAndUpdate({ _id: ETH_SYNC_BLOCK_DB_ID }, {"$push": { "listen_addresses": address } }, { upsert: true });
+		await Wallet.findOneAndUpdate({ walletName: configETH.depositWalletName }, { addressesNum: depositWallet.getAddressCount() });
 
-		response_data = {
+		const ethSyncBlockInfo = await ETHSyncBlock.findOneAndUpdate({ _id: constants.eth.SYNC_BLOCK_INFO_ID }, { "$push": { "listenAddresses": address } }, { upsert: true });
+		if (!isEmpty(ethSyncBlockInfo)) ETHSyncBlockInfo.update(ethSyncBlockInfo);
+
+		const responseData = {
 			address: address,
 		};
-		return apiResponse.successResponseWithData(res, "Address Created", response_data);
+		return apiResponse.successResponseWithData(res, "Address Created", responseData);
 	} catch (e) {
 		console.log("reponse", e);
 		return apiResponse.ErrorResponse(res, e.message);
 	}
-};
+}
 
 
-transfer = async (req, res) => {
+async function withdraw(req, res){
 	const {
-		network,
-		wallet_name,
-		password
+		to,
+		amount
 	} = req.body;
 
 	try {
-		const wallet = new EthHdWallet(masterKey);
+		if (isEmpty(withdrawWallet)) {
+			return apiResponse.ErrorResponse(res, "There are no exist withdraw wallet");
+		}
 
+		const withdrawOrder = new Withdraw({
+			currency: "ETH",
+			to: to,
+			value: amount,
+			status: "inqueue"
+		});
+
+		const response = await Withdraw.create(withdrawOrder);
+		return apiResponse.successResponseWithData(res, "The withdraw order in queue", response);
 
 	} catch (e) {
 		console.log("reponse", e);
 		return apiResponse.ErrorResponse(res, e.message);
 	}
+}
 
-	return apiResponse.successResponseWithData(res, "Operation success", newAddress);
-};
+async function withdrawQueue(){
+
+	try {
+		if (isEmpty(withdrawWallet)) {
+			throw new Error("There are no exist withdraw wallet");
+		}
+		const withdrawOrders = await Withdraw.find({ currency: "ETH", status: "inqueue" });
+		var currentNonce = await web3.eth.getTransactionCount(configETH.withdrawAddress, "pending");
+		const currentGasPrice = await web3.eth.getGasPrice();
+		const chainID = await web3.eth.net.getId();
+
+		for (let withdrawOrder of withdrawOrders) {
+
+			console.log("withdrawOrder", withdrawOrder);
+
+			const withdrawAmount = web3.utils.numberToHex(web3.utils.toWei(withdrawOrder.value, "ether"));
+			const signedTransaction = withdrawWallet.signTransaction({
+				from: configETH.withdrawAddress,
+				to: withdrawOrder.to,
+				value: withdrawAmount,
+				nonce: web3.utils.numberToHex(currentNonce),
+				gasPrice: web3.utils.numberToHex(currentGasPrice),
+				gasLimit: web3.utils.toHex(21000),
+				chainId: web3.utils.numberToHex(chainID)
+			});
+			const transaction = await web3.eth.sendSignedTransaction(signedTransaction);
+			await Withdraw.findOneAndUpdate({ _id: withdrawOrder._id }, { status: "transfered", transactionId: transaction.transactionHash });
+			currentNonce++;
+		}
+
+	} catch (e) {
+		console.log("reponse", e);
+	}
+}
+
+(function () {
+	initWallet();
+	setTimeout(withdrawQueue, 5 * 60 * 1000); // call after 5 minutes
+})();
 
 module.exports = {
 	initWallet,
 	configWallet,
 	createWallet,
 	genarateAddress,
-	transfer
+	withdraw
 };

@@ -1,9 +1,8 @@
-const createwallet = require("./create-wallet");
+const createwallet = require("./createWallet");
 const withdraw = require("./withdraw");
-const genarateAddress = require("./genarate-address");
-
+const configWallet = require("./configWallet");
 module.exports = {
 	createwallet,
 	withdraw,
-	genarateAddress
+	configWallet
 };

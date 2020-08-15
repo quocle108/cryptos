@@ -50,4 +50,4 @@ You can set custom rules for eslint in `.eslintrc.json` file, Added at project r
 
 ## POSTman
 
-https://www.getpostman.com/collections/e3da35d0306821df44a9
+https://www.getpostman.com/collections/9fc64c37cb280f83d6bb

@@ -25,9 +25,11 @@ const validate = async (req, res, next) => {
 	}
 };
 
-const validateGenarateAddress = [checkSchema(rules.genarateAddress), validate];
 const validateCreateWallet = [checkSchema(rules.createwallet), validate];
+const validateWithdraw = [checkSchema(rules.withdraw), validate];
+const validateConfigWallet = [checkSchema(rules.configWallet), validate];
 module.exports = {
 	validateCreateWallet,
-	validateGenarateAddress
+	validateWithdraw,
+	validateConfigWallet
 };

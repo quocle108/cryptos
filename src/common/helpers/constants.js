@@ -1,9 +1,8 @@
 exports.constants = {
-	admin: {
-		name: "admin",
-		email: "admin@admin.com"
-	},
-	confirmEmails: {
-		from : "no-reply@test-app.com"
+	eth:{
+		CONFIG_ID: 0,
+		SYNC_BLOCK_INFO_ID: 1,
+		START_SYNC_BLOCK:0,
+		DEFAULT_WALLET_PASSWORD:"passworddsd"
 	}
 };

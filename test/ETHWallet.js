@@ -93,7 +93,7 @@ describe("Wallet", () => {
 		it("It should genarate address", (done) => {
 			chai.request(server)
 				.post("/crypto/eth/genarateAddress")
-				.send({})
+				.send()
 				.end((err, res) => {
 					res.should.have.status(200);
 					done();
